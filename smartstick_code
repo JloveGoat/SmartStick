@@ -1,0 +1,64 @@
+#include <SoftwareSerial.h>
+
+SoftwareSerial mySerial(2, 3); 
+const int setPin = 4;          
+const int vibrationMotorPin = 9; 
+
+void setup() {
+  Serial.begin(9600);          
+  mySerial.begin(115200);      
+  pinMode(setPin, OUTPUT);     
+  pinMode(vibrationMotorPin, OUTPUT); 
+  setHighFrameRate();
+}
+
+void setHighFrameRate() {
+ 
+  digitalWrite(setPin, HIGH);  
+  delay(100);                  
+  digitalWrite(setPin, LOW);   
+  
+}
+
+void loop() {
+  
+  while (mySerial.available() >= 9) { 
+    uint8_t receivedData[9];
+    uint8_t sum = 0;
+    
+    
+    for (uint8_t i = 0; i < 9; i++) {
+      receivedData[i] = mySerial.read();
+      if (i < 8) {
+        sum += receivedData[i]; 
+      }
+    }
+    
+    
+    if (receivedData[0] == 0x59 && receivedData[1] == 0x59 && receivedData[8] == (sum & 0xFF)) { 
+      uint16_t distance = receivedData[2] + receivedData[3] * 256; 
+
+      
+      if (distance < 2) distance = 2;
+      if (distance > 250) distance = 250;
+
+      Serial.print("Distance: ");
+      Serial.print(distance);
+      Serial.println(" cm");
+
+      
+      int vibrationIntensity = map(distance, 2, 250, 255, 0); 
+      vibrationIntensity = constrain(vibrationIntensity, 0, 255); 
+      analogWrite(vibrationMotorPin, vibrationIntensity); 
+
+      
+      Serial.print("Vibration Intensity: ");
+      Serial.println(vibrationIntensity);
+    } else {
+      
+      while (mySerial.available()) {
+        mySerial.read();
+      }
+    }
+  }
+}
